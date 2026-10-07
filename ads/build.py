@@ -27,13 +27,33 @@ STORY = (1080, 1920)
 
 
 # ---- backgrounds -----------------------------------------------------------
+def mono_gold(im):
+    """Black/white look: desaturate everything except warm (gold/copper) tones."""
+    import numpy as np
+    a = np.asarray(im.convert("RGB")).astype("float32") / 255.0
+    hsv = np.asarray(im.convert("HSV")).astype("float32") / 255.0
+    h = hsv[..., 0] * 360.0
+    # warm membership: 0-65deg and 340-360deg, soft edges
+    sat = hsv[..., 1]
+    w = np.clip((58 - h) / 18, 0, 1) * (h < 180) + np.clip((h - 335) / 15, 0, 1) * (h >= 180)
+    w = w * np.clip((sat - 0.22) / 0.25, 0, 1)          # ignore low-sat noise
+    w = np.asarray(Image.fromarray((np.clip(w, 0, 1) * 255).astype("uint8")).filter(ImageFilter.GaussianBlur(2.5))).astype("float32") / 255.0
+    w = w[..., None]
+    luma = (a * [0.299, 0.587, 0.114]).sum(-1, keepdims=True)
+    luma = np.clip(luma, 0, 1) ** 1.35 * 1.05          # deeper, contrastier blacks
+    gray = np.repeat(luma, 3, axis=-1)
+    warm = a * (0.92 + 0.0)                             # keep gold as-is
+    out = gray * (1 - w) + warm * w
+    return Image.fromarray((np.clip(out, 0, 1) * 255).astype("uint8"))
+
+
 def smooth(t):
     return t * t * (3 - 2 * t)
 
 
 def build_bg(hero_box, src, W, H, scale, side, name):
     """Place a cropped render on one side and extend the scene to fill W x H."""
-    hero = Image.open(ASSETS / src).convert("RGB").crop(hero_box)
+    hero = mono_gold(Image.open(ASSETS / src).convert("RGB").crop(hero_box))
     hw, hh = hero.size
     hero = hero.resize((round(hw * scale), round(hh * scale)), Image.LANCZOS)
     hw, hh = hero.size
@@ -79,7 +99,7 @@ def build_bg(hero_box, src, W, H, scale, side, name):
 
 
 def crop_asset(box, src, name, scale=1.0):
-    im = Image.open(ASSETS / src).convert("RGB").crop(box)
+    im = mono_gold(Image.open(ASSETS / src).convert("RGB").crop(box))
     if scale != 1.0:
         im = im.resize((round(im.width * scale), round(im.height * scale)), Image.LANCZOS)
     p = ASSETS / f"{name}.jpg"
@@ -90,7 +110,7 @@ def crop_asset(box, src, name, scale=1.0):
 # ---- shared HTML -----------------------------------------------------------
 CSS = """
 :root{
-  --navy:#061c38; --navy2:#0a2b52; --sea:#1b7ec6;
+  --navy:#000; --navy2:#111;
   --g1:#f6e2a8; --g2:#d9aa4a; --g3:#9a6f1f;
   --gold:linear-gradient(135deg,#f6e2a8 0%,#d9aa4a 50%,#a77a24 100%);
 }
@@ -103,10 +123,10 @@ body{position:relative;font-family:'Montserrat',sans-serif;color:#fff;-webkit-fo
 .brand{position:absolute;display:flex;align-items:center;gap:14px;font-weight:700;letter-spacing:.34em;font-size:21px}
 .brand i{display:block;width:14px;height:14px;background:var(--gold);transform:rotate(45deg)}
 .eyebrow{font-weight:600;letter-spacing:.26em;font-size:20px;text-transform:uppercase;color:#f6e2a8}
-.cta{display:inline-flex;align-items:center;gap:16px;background:var(--gold);color:#07213f;font-weight:700;
+.cta{display:inline-flex;align-items:center;gap:16px;background:var(--gold);color:#0b0b0b;font-weight:700;
   letter-spacing:.14em;text-transform:uppercase;border-radius:999px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
 .fine{font-size:16px;line-height:1.45;color:rgba(255,255,255,.82)}
-.glass{background:rgba(6,28,56,.58);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+.glass{background:rgba(8,8,8,.58);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
   border:1.5px solid rgba(246,226,168,.55);border-radius:22px}
 .hair{height:1.5px;background:linear-gradient(90deg,rgba(246,226,168,.9),rgba(246,226,168,0))}
 .shadow{text-shadow:0 2px 18px rgba(3,20,45,.55)}
@@ -131,7 +151,7 @@ def ad1_post():
     bg = build_bg((730, 0, 1254, 1254), "1.webp", *POST, 1350 / 1254, "right", "a_post")
     body = f"""
 <img class="abs" src="../assets/{bg}" style="inset:0;width:1080px;height:1350px">
-<div class="abs" style="inset:0;background:linear-gradient(90deg,rgba(5,30,66,.78) 0%,rgba(5,30,66,.55) 42%,rgba(5,30,66,0) 66%)"></div>
+<div class="abs" style="inset:0;background:linear-gradient(90deg,rgba(0,0,0,.78) 0%,rgba(0,0,0,.55) 42%,rgba(0,0,0,0) 66%)"></div>
 <div class="brand shadow" style="left:60px;top:56px"><i></i>{BRAND}</div>
 <div class="abs eyebrow shadow" style="left:60px;top:158px;font-size:17px;letter-spacing:.2em">{PROJECT} &middot; by Danube</div>
 <h1 class="abs serif shadow" style="left:60px;top:204px;width:560px;font-size:76px;line-height:1.06;font-weight:700">
@@ -157,7 +177,7 @@ def ad1_story():
     bg = build_bg((730, 0, 1254, 1254), "1.webp", *STORY, 1.08, "right", "a_story")
     body = f"""
 <img class="abs" src="../assets/{bg}" style="inset:0;width:1080px;height:1920px">
-<div class="abs" style="inset:0;background:linear-gradient(180deg,rgba(5,30,66,.55) 0%,rgba(5,30,66,0) 32%),linear-gradient(90deg,rgba(5,30,66,.72) 0%,rgba(5,30,66,.45) 40%,rgba(5,30,66,0) 62%)"></div>
+<div class="abs" style="inset:0;background:linear-gradient(180deg,rgba(0,0,0,.55) 0%,rgba(0,0,0,0) 32%),linear-gradient(90deg,rgba(0,0,0,.72) 0%,rgba(0,0,0,.45) 40%,rgba(0,0,0,0) 62%)"></div>
 <div class="brand shadow" style="left:60px;top:220px"><i></i>{BRAND}</div>
 <div class="abs eyebrow shadow" style="left:60px;top:300px">{PROJECT} &middot; by Danube</div>
 <h1 class="abs serif shadow" style="left:60px;top:346px;width:960px;font-size:88px;line-height:1.05;font-weight:700">
@@ -193,7 +213,7 @@ def ad2_post():
     )
     body = f"""
 <img class="abs" src="../assets/{bg}" style="inset:0;width:1080px;height:1350px">
-<div class="abs" style="inset:0;background:linear-gradient(270deg,rgba(5,30,66,.6) 0%,rgba(5,30,66,.35) 55%,rgba(5,30,66,0) 80%)"></div>
+<div class="abs" style="inset:0;background:linear-gradient(270deg,rgba(0,0,0,.6) 0%,rgba(0,0,0,.35) 55%,rgba(0,0,0,0) 80%)"></div>
 <div class="brand shadow" style="left:480px;top:56px"><i></i>{BRAND}</div>
 <div class="abs eyebrow shadow" style="left:480px;top:156px;font-size:17px;letter-spacing:.2em">Dubai Maritime City &middot; by Danube</div>
 <h1 class="abs serif shadow" style="left:480px;top:196px;width:560px;font-size:68px;line-height:1.08;font-weight:700">
@@ -224,7 +244,7 @@ def ad2_story():
     )
     body = f"""
 <img class="abs" src="../assets/{bg}" style="inset:0;width:1080px;height:1920px">
-<div class="abs" style="inset:0;background:linear-gradient(180deg,rgba(5,30,66,.55) 0%,rgba(5,30,66,0) 30%),linear-gradient(270deg,rgba(5,30,66,.62) 0%,rgba(5,30,66,.35) 50%,rgba(5,30,66,0) 78%),linear-gradient(0deg,rgba(4,20,43,.92) 0%,rgba(4,20,43,.7) 12%,rgba(4,20,43,0) 24%)"></div>
+<div class="abs" style="inset:0;background:linear-gradient(180deg,rgba(0,0,0,.55) 0%,rgba(0,0,0,0) 30%),linear-gradient(270deg,rgba(0,0,0,.62) 0%,rgba(0,0,0,.35) 50%,rgba(0,0,0,0) 78%),linear-gradient(0deg,rgba(0,0,0,.92) 0%,rgba(0,0,0,.7) 12%,rgba(0,0,0,0) 24%)"></div>
 <div class="brand shadow" style="left:60px;top:220px"><i></i>{BRAND}</div>
 <div class="abs eyebrow shadow" style="left:60px;top:300px;font-size:19px">Dubai Maritime City &middot; by Danube</div>
 <h1 class="abs serif shadow" style="left:60px;top:346px;width:960px;font-size:92px;line-height:1.05;font-weight:700">
@@ -261,7 +281,7 @@ def ad3_post():
         for a, b in FACTS
     )
     css = """
-body{background:radial-gradient(120% 80% at 80% 0%,#12417a 0%,#082448 45%,#04142b 100%)}
+body{background:radial-gradient(120% 80% at 80% 0%,#2a2a2a 0%,#0e0e0e 50%,#000 100%)}
 .arch{position:absolute;overflow:hidden;border-radius:999px 999px 0 0;border:3px solid #d9aa4a;box-shadow:0 0 0 10px rgba(217,170,74,.12),0 30px 60px rgba(0,0,0,.45)}
 .arch img{width:100%;height:100%;object-fit:cover;object-position:50% 20%}
 """
@@ -289,7 +309,7 @@ def ad3_story():
         for a, b in FACTS
     )
     css = """
-body{background:radial-gradient(120% 70% at 80% 0%,#12417a 0%,#082448 45%,#04142b 100%)}
+body{background:radial-gradient(120% 70% at 80% 0%,#2a2a2a 0%,#0e0e0e 50%,#000 100%)}
 .arch{position:absolute;overflow:hidden;border-radius:999px 999px 0 0;border:3px solid #d9aa4a;box-shadow:0 0 0 10px rgba(217,170,74,.12),0 30px 60px rgba(0,0,0,.45)}
 .arch img{width:100%;height:100%;object-fit:cover;object-position:50% 20%}
 """
