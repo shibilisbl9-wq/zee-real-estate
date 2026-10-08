@@ -119,7 +119,7 @@ html,body{width:var(--W);height:var(--H);overflow:hidden}
 body{position:relative;font-family:'Montserrat',sans-serif;color:#fff;-webkit-font-smoothing:antialiased}
 .abs{position:absolute}
 .serif{font-family:'Playfair Display',serif;font-variant-numeric:lining-nums;font-feature-settings:'lnum' 1}
-.goldtxt{background:var(--gold);-webkit-background-clip:text;background-clip:text;color:transparent}
+.goldtxt{background:var(--gold);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none}
 .brand{position:absolute;display:flex;align-items:center;gap:14px;font-weight:700;letter-spacing:.34em;font-size:21px}
 .brand i{display:block;width:14px;height:14px;background:var(--gold);transform:rotate(45deg)}
 .eyebrow{font-weight:600;letter-spacing:.26em;font-size:20px;text-transform:uppercase;color:#f6e2a8}
@@ -129,7 +129,7 @@ body{position:relative;font-family:'Montserrat',sans-serif;color:#fff;-webkit-fo
 .glass{background:rgba(8,8,8,.58);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
   border:1.5px solid rgba(246,226,168,.55);border-radius:22px}
 .hair{height:1.5px;background:linear-gradient(90deg,rgba(246,226,168,.9),rgba(246,226,168,0))}
-.shadow{text-shadow:0 2px 18px rgba(3,20,45,.55)}
+.shadow{text-shadow:0 2px 18px rgba(0,0,0,.55)}
 """
 
 
